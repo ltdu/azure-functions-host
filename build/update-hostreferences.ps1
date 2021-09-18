@@ -94,7 +94,7 @@ try
         else
         {
             WriteLog "Adding '$packageName' '$packageVersion' to project"
-            & { dotnet add package $packageName -v $packageVersion -s $source }
+            & { dotnet add package $packageName -v $packageVersion -s $source --no-restore }
 
             if ($LASTEXITCODE -ne 0)
             {

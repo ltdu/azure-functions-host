@@ -38,6 +38,18 @@ if ($packagesToUpdate.Count -eq 0)
     WriteLog "There are no packages to update in '$url'" -Throw
 }
 
+<#
+TODO: Need to create a integrationTestsBuildManifest.json
+
+$integrationTestsArtifactsFolderPath = "$PSScriptRoot/integrationTestsArtifacts"
+
+if (-not (Test-Path $integrationTestsArtifactsFolderPath))
+{
+    WriteLog "Creating folder '$integrationTestsArtifactsFolderPath'"
+    New-Item -Path $integrationTestsArtifactsFolderPath -ItemType Directory -Force | Out-Null
+}
+#>
+
 # Update packages references
 WriteLog "Package references to update: $($packagesToUpdate.Count)"
 
@@ -47,6 +59,13 @@ $currentDirectory = Get-Location
 try
 {
     set-location $path
+
+    # Update the path version in common
+    $helperModulePath = "$PSScriptRoot\helper.psm1"
+    Import-Module $helperModulePath -Force -ErrorAction Stop
+
+    $propsFilePath = "$PSScriptRoot\common.props"
+    AddPatchVersionToCommonProps -FilePath $propsFilePath
 
     foreach ($package in $packagesToUpdate)
     {

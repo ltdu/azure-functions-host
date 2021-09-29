@@ -12,6 +12,7 @@ namespace Microsoft.Azure.Functions.Analyzers
 
         internal static class DiagnosticsCategories
         {
+            public const string Performance = "Performance";
             public const string Usage = "Usage";
         }
     }

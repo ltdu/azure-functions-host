@@ -831,8 +831,7 @@ namespace Microsoft.Azure.WebJobs.Script
                             mediaType.MediaType.IndexOf(ScriptConstants.MediatypeMutipartPrefix, StringComparison.OrdinalIgnoreCase) >= 0);
         }
 
-        public static void ValidateRetryOptions(RetryOptions
-            retryOptions)
+        public static void ValidateRetryOptions(RetryOptions retryOptions, IEnvironment environment)
         {
             if (retryOptions == null)
             {
@@ -841,6 +840,15 @@ namespace Microsoft.Azure.WebJobs.Script
             if (!retryOptions.MaxRetryCount.HasValue)
             {
                 throw new ArgumentNullException(nameof(retryOptions.MaxRetryCount));
+            }
+            // Validate SKU limits
+            if (environment.IsWindowsElasticPremium() && retryOptions.MaximumInterval > TimeSpan.FromMinutes(60))
+            {
+                throw new InvalidOperationException("Maximum delay interval must not exceed 60 minutes for Elastic Premium plan");
+            }
+            if (environment.IsConsumptionSku() && retryOptions.DelayInterval > TimeSpan.FromMinutes(10))
+            {
+                throw new InvalidOperationException("Maximum delay interval must not exceed 10 minutes for Consumption plan");
             }
             switch (retryOptions.Strategy)
             {

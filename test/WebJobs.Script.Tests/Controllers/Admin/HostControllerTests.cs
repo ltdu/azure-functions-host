@@ -9,11 +9,13 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.WebJobs.Host.Scale;
 using Microsoft.Azure.WebJobs.Script.ExtensionBundle;
 using Microsoft.Azure.WebJobs.Script.Scale;
 using Microsoft.Azure.WebJobs.Script.WebHost.Controllers;
 using Microsoft.Azure.WebJobs.Script.WebHost.Management;
+using Microsoft.Azure.WebJobs.Script.WebHost.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.WebJobs.Script.Tests;
@@ -198,6 +200,36 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
 
             var result = (StatusCodeResult)(await _hostController.Ping(_mockScriptHostManager.Object));
             Assert.Equal((int)HttpStatusCode.OK, result.StatusCode);
+        }
+
+        [Theory]
+        [InlineData(0, 0, "Completed")]
+        [InlineData(2, 0, "InProgress")]
+        [InlineData(0, 10, "InProgress")]
+        [InlineData(5, 1, "InProgress")]
+        public void GetDrainStatus_ReturnsExpected(int outstandingRetries, int outstandingInvocations, string expected)
+        {
+            var scriptHostManagerMock = new Mock<IScriptHostManager>(MockBehavior.Strict);
+            var functionActivityStatusProvider = new Mock<IFunctionActivityStatusProvider>(MockBehavior.Strict);
+            functionActivityStatusProvider.Setup(x => x.GetStatus()).Returns(new FunctionActivityStatus()
+            {
+                OutstandingRetries = outstandingRetries,
+                OutstandingInvocations = outstandingInvocations
+            });
+            var serviceProviderMock = scriptHostManagerMock.As<IServiceProvider>();
+            serviceProviderMock.Setup(x => x.GetService(typeof(IFunctionActivityStatusProvider))).Returns(functionActivityStatusProvider.Object);
+
+            var result = (OkObjectResult)_hostController.DrainStatus(scriptHostManagerMock.Object);
+            Assert.Equal((result.Value as DrainModeStatus).Status, expected);
+        }
+
+        [Fact]
+        public void GetDrainStatus_ReturnsServiceUnavailable()
+        {
+            var scriptHostManagerMock = new Mock<IScriptHostManager>(MockBehavior.Strict);
+
+            var result = (StatusCodeResult)_hostController.DrainStatus(scriptHostManagerMock.Object);
+            Assert.Equal(result.StatusCode, StatusCodes.Status503ServiceUnavailable);
         }
     }
 }
